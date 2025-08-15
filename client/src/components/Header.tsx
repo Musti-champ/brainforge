@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Puzzle, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -16,18 +17,18 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2">
               <Puzzle className="h-8 w-8 text-primary" />
               <h1 className="text-xl font-bold text-gray-900">API Puzzle Quest</h1>
-            </div>
+            </Link>
             <span className="bg-accent/10 text-accent text-xs font-medium px-2 py-1 rounded-full">Beta</span>
           </div>
           
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#" className="text-gray-700 hover:text-primary font-medium" data-testid="nav-challenges">Challenges</a>
-            <a href="#" className="text-gray-700 hover:text-primary font-medium" data-testid="nav-leaderboard">Leaderboard</a>
-            <a href="#" className="text-gray-700 hover:text-primary font-medium" data-testid="nav-collections">Collections</a>
-            <a href="#" className="text-gray-700 hover:text-primary font-medium" data-testid="nav-docs">Docs</a>
+            <Link href="/challenges" className="text-gray-700 hover:text-primary font-medium" data-testid="nav-challenges">Challenges</Link>
+            <Link href="/skill-tree" className="text-gray-700 hover:text-primary font-medium" data-testid="nav-skill-tree">Skill Tree</Link>
+            <Link href="/leaderboard" className="text-gray-700 hover:text-primary font-medium" data-testid="nav-leaderboard">Leaderboard</Link>
+            <Link href="/collections" className="text-gray-700 hover:text-primary font-medium" data-testid="nav-collections">Collections</Link>
           </nav>
 
           <div className="flex items-center space-x-4">
@@ -53,10 +54,10 @@ export default function Header() {
               </SheetTrigger>
               <SheetContent side="right">
                 <nav className="flex flex-col space-y-4 mt-8">
-                  <a href="#" className="text-gray-700 hover:text-primary font-medium" data-testid="mobile-nav-challenges">Challenges</a>
-                  <a href="#" className="text-gray-700 hover:text-primary font-medium" data-testid="mobile-nav-leaderboard">Leaderboard</a>
-                  <a href="#" className="text-gray-700 hover:text-primary font-medium" data-testid="mobile-nav-collections">Collections</a>
-                  <a href="#" className="text-gray-700 hover:text-primary font-medium" data-testid="mobile-nav-docs">Docs</a>
+                  <Link href="/challenges" className="text-gray-700 hover:text-primary font-medium" data-testid="mobile-nav-challenges">Challenges</Link>
+                  <Link href="/skill-tree" className="text-gray-700 hover:text-primary font-medium" data-testid="mobile-nav-skill-tree">Skill Tree</Link>
+                  <Link href="/leaderboard" className="text-gray-700 hover:text-primary font-medium" data-testid="mobile-nav-leaderboard">Leaderboard</Link>
+                  <Link href="/collections" className="text-gray-700 hover:text-primary font-medium" data-testid="mobile-nav-collections">Collections</Link>
                 </nav>
               </SheetContent>
             </Sheet>

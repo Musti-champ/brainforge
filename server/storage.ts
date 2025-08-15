@@ -76,6 +76,10 @@ export class MemStorage implements IStorage {
         requirements: ["Make a GET request", "Parse the JSON response", "Display quote and author"],
         completedCount: 2100,
         isActive: true,
+        skillsLearned: ["HTTP GET requests", "JSON parsing", "Basic error handling"],
+        apiProvider: "Quotable API",
+        prerequisites: [],
+        tags: ["beginner-friendly", "quotes", "json"]
       },
       {
         id: "challenge-2",
@@ -106,6 +110,10 @@ export class MemStorage implements IStorage {
         requirements: ["Add API key authentication", "Handle HTTP errors", "Extract specific weather data"],
         completedCount: 1500,
         isActive: true,
+        skillsLearned: ["API authentication", "Error handling", "Data transformation", "Nested object parsing"],
+        apiProvider: "OpenWeather API",
+        prerequisites: ["challenge-1"],
+        tags: ["weather", "api-keys", "error-handling"]
       },
       {
         id: "challenge-3",
@@ -146,11 +154,158 @@ async function exchangeCodeForToken(code) {
         requirements: ["Implement OAuth authorization flow", "Exchange authorization code for access token", "Make authenticated API requests"],
         completedCount: 542,
         isActive: true,
+        skillsLearned: ["OAuth 2.0 flow", "Token management", "Secure authentication", "GitHub API integration"],
+        apiProvider: "GitHub API",
+        prerequisites: ["challenge-2"],
+        tags: ["oauth", "authentication", "security", "github"]
       },
+      {
+        id: "challenge-4",
+        title: "GraphQL Query Builder",
+        description: "Master GraphQL syntax by building complex queries with variables and fragments.",
+        difficulty: "intermediate",
+        category: "GraphQL",
+        xpReward: 350,
+        estimatedTime: 45,
+        apiEndpoint: "https://rickandmortyapi.com/graphql",
+        sampleCode: `const query = \`
+  query GetCharacters($page: Int, $filter: FilterCharacter) {
+    characters(page: $page, filter: $filter) {
+      info {
+        count
+        pages
+      }
+      results {
+        id
+        name
+        status
+        species
+        location {
+          name
+        }
+      }
+    }
+  }
+\`;
+
+fetch('https://rickandmortyapi.com/graphql', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    query,
+    variables: {
+      page: 1,
+      filter: { status: "alive" }
+    }
+  })
+});`,
+        expectedResponse: { data: { characters: { results: [] } } },
+        hints: ["GraphQL uses POST method with query in body", "Variables allow dynamic queries", "Use fragments to reuse query parts"],
+        postmanCollectionUrl: "https://postman.com/collections/rickandmorty-graphql",
+        requirements: ["Write GraphQL queries", "Use variables and filters", "Handle nested data structures"],
+        completedCount: 890,
+        isActive: true,
+        skillsLearned: ["GraphQL syntax", "Query variables", "Fragment usage", "API introspection"],
+        apiProvider: "Rick and Morty API",
+        prerequisites: ["challenge-1"],
+        tags: ["graphql", "queries", "variables", "fragments"]
+      },
+      {
+        id: "challenge-5",
+        title: "Rate Limiting & Pagination",
+        description: "Handle API rate limits gracefully and implement efficient pagination strategies.",
+        difficulty: "advanced",
+        category: "REST",
+        xpReward: 400,
+        estimatedTime: 50,
+        apiEndpoint: "https://jsonplaceholder.typicode.com/posts",
+        sampleCode: `class APIClient {
+  constructor() {
+    this.rateLimitRemaining = 100;
+    this.rateLimitReset = Date.now() + 3600000;
+  }
+
+  async makeRequest(url, options = {}) {
+    // Check rate limit
+    if (this.rateLimitRemaining <= 0 && Date.now() < this.rateLimitReset) {
+      const waitTime = this.rateLimitReset - Date.now();
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+
+    const response = await fetch(url, options);
+    
+    // Update rate limit from headers
+    this.rateLimitRemaining = parseInt(response.headers.get('X-RateLimit-Remaining') || '100');
+    this.rateLimitReset = parseInt(response.headers.get('X-RateLimit-Reset') || Date.now() + 3600000);
+    
+    return response;
+  }
+
+  async getAllPosts() {
+    let allPosts = [];
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = await this.makeRequest(\`https://jsonplaceholder.typicode.com/posts?_page=\${page}&_limit=10\`);
+      const posts = await response.json();
+      
+      if (posts.length === 0) {
+        hasMore = false;
+      } else {
+        allPosts = allPosts.concat(posts);
+        page++;
+      }
+    }
+
+    return allPosts;
+  }
+}`,
+        expectedResponse: { posts: [], pagination: { page: 1, total: 100 } },
+        hints: ["Monitor rate limit headers in responses", "Implement exponential backoff for retries", "Use cursor-based pagination when available"],
+        postmanCollectionUrl: "https://postman.com/collections/pagination-rate-limiting",
+        requirements: ["Implement rate limiting logic", "Handle pagination efficiently", "Parse response headers"],
+        completedCount: 324,
+        isActive: true,
+        skillsLearned: ["Rate limiting", "Pagination strategies", "Header parsing", "Async operations"],
+        apiProvider: "JSONPlaceholder",
+        prerequisites: ["challenge-2"],
+        tags: ["rate-limiting", "pagination", "performance", "headers"]
+      }
     ];
 
     sampleChallenges.forEach(challenge => {
       this.challenges.set(challenge.id, challenge);
+    });
+
+    // Add some sample progress for the user
+    const sampleProgress = [
+      {
+        id: "progress-1",
+        userId: "user-1",
+        challengeId: "challenge-1",
+        isCompleted: true,
+        currentStep: 4,
+        solution: "fetch('https://api.quotable.io/random').then(r => r.json()).then(d => console.log(d))",
+        completedAt: new Date(Date.now() - 86400000 * 2), // 2 days ago
+        attempts: 1
+      },
+      {
+        id: "progress-2",
+        userId: "user-1",
+        challengeId: "challenge-2",
+        isCompleted: false,
+        currentStep: 3,
+        solution: null,
+        completedAt: null,
+        attempts: 2
+      }
+    ];
+
+    sampleProgress.forEach(progress => {
+      this.userProgress.set(progress.id, progress);
     });
   }
 

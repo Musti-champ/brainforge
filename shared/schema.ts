@@ -32,6 +32,10 @@ export const challenges = pgTable("challenges", {
   requirements: jsonb("requirements").$type<string[]>().notNull().default([]),
   completedCount: integer("completed_count").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
+  skillsLearned: jsonb("skills_learned").$type<string[]>().notNull().default([]),
+  apiProvider: text("api_provider"), // GitHub, OpenWeather, etc.
+  prerequisites: jsonb("prerequisites").$type<string[]>().notNull().default([]),
+  tags: jsonb("tags").$type<string[]>().notNull().default([]),
 });
 
 export const userProgress = pgTable("user_progress", {
