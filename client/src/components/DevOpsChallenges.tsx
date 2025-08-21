@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Container, Cloud, Activity, Shield, GitBranch, Monitor, Zap, Play, CheckCircle } from "lucide-react";
+import { Container, Cloud, Activity, Shield, GitBranch, Monitor, Zap, Play, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,18 +50,6 @@ export default function DevOpsChallenges() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get DevOps challenges
-  const { data: challenges } = useQuery({
-    queryKey: ["/api/deployment-challenges"],
-  });
-
-  // Get deployment progress
-  const { data: progress } = useQuery({
-    queryKey: ["/api/deployment-progress", selectedChallenge],
-    enabled: !!selectedChallenge,
-    refetchInterval: 2000, // Poll for real-time updates
-  });
-
   // Mock DevOps challenges
   const mockChallenges: DeploymentChallenge[] = [
     {
@@ -84,16 +72,6 @@ RUN npm ci --only=production
 # Copy source code
 COPY . .
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Change ownership
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
-
 # Expose port
 EXPOSE 3000
 
@@ -103,60 +81,50 @@ CMD ["npm", "start"]`,
 on:
   push:
     branches: [main]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build Docker image
-        run: docker build -t api-server .
-      - name: Run tests
-        run: docker run --rm api-server npm test
-      - name: Deploy to production
-        run: echo "Deploying to production..."`,
-      deploymentUrl: undefined,
-      monitoringEndpoints: ["/health", "/metrics"],
-      xpReward: 400,
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm test
+      - run: docker build -t api .
+      - run: docker push api:latest`,
+      monitoringEndpoints: ["/health", "/metrics", "/ready", "/api/status"],
+      xpReward: 500,
       estimatedTime: 45,
-      completedCount: 234,
+      completedCount: 156,
       isActive: true,
       requirements: [
-        "Create optimized Dockerfile",
-        "Implement health checks",
-        "Set up CI/CD pipeline",
-        "Configure monitoring"
+        "Multi-stage Docker build",
+        "Non-root user for security",
+        "Health check endpoint",
+        "Environment variable configuration"
       ],
       steps: [
-        {
-          title: "Write Dockerfile",
-          description: "Create an optimized, secure Dockerfile for the Node.js API",
-          isCompleted: false
-        },
-        {
-          title: "Set up CI/CD",
-          description: "Configure GitHub Actions or similar CI/CD pipeline",
-          isCompleted: false
-        },
-        {
-          title: "Deploy Container",
-          description: "Deploy the containerized application to a cloud platform",
-          isCompleted: false
-        },
-        {
-          title: "Configure Monitoring",
-          description: "Set up health checks and monitoring endpoints",
-          isCompleted: false
-        }
+        { title: "Write Dockerfile", description: "Create optimized Docker container", isCompleted: false },
+        { title: "Configure CI/CD", description: "Set up automated deployment pipeline", isCompleted: false },
+        { title: "Deploy Application", description: "Deploy to cloud platform", isCompleted: false },
+        { title: "Monitor & Test", description: "Verify deployment health", isCompleted: false }
       ]
     },
     {
       id: "devops-2",
-      title: "Kubernetes API Deployment",
-      description: "Deploy and scale an API using Kubernetes with proper resource management and auto-scaling.",
+      title: "Kubernetes Deployment",
+      description: "Deploy a microservice to Kubernetes with proper scaling and monitoring.",
       difficulty: "advanced",
       category: "orchestration",
-      dockerfileTemplate: `# Kubernetes deployment configuration`,
+      dockerfileTemplate: `FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 8080
+USER node
+CMD ["npm", "start"]`,
       cicdConfig: `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -173,122 +141,84 @@ spec:
     spec:
       containers:
       - name: api
-        image: your-api:latest
+        image: api:latest
         ports:
-        - containerPort: 3000
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10`,
-      deploymentUrl: undefined,
-      monitoringEndpoints: ["/health", "/ready", "/metrics"],
-      xpReward: 600,
+        - containerPort: 8080`,
+      monitoringEndpoints: ["/health", "/metrics", "/ready"],
+      xpReward: 800,
       estimatedTime: 90,
-      completedCount: 89,
+      completedCount: 78,
       isActive: true,
       requirements: [
-        "Create Kubernetes manifests",
-        "Configure auto-scaling",
-        "Set up load balancing",
-        "Implement monitoring and logging"
+        "Kubernetes manifests",
+        "Resource limits and requests",
+        "Horizontal Pod Autoscaler",
+        "Service and Ingress configuration"
       ],
       steps: [
-        {
-          title: "Create K8s Manifests",
-          description: "Write Deployment, Service, and ConfigMap YAML files",
-          isCompleted: false
-        },
-        {
-          title: "Configure Auto-scaling",
-          description: "Set up Horizontal Pod Autoscaler (HPA)",
-          isCompleted: false
-        },
-        {
-          title: "Deploy to Cluster",
-          description: "Deploy application to Kubernetes cluster",
-          isCompleted: false
-        },
-        {
-          title: "Monitor Performance",
-          description: "Verify scaling and performance metrics",
-          isCompleted: false
-        }
+        { title: "Create K8s Manifests", description: "Write deployment and service configs", isCompleted: false },
+        { title: "Configure Scaling", description: "Set up auto-scaling rules", isCompleted: false },
+        { title: "Deploy to Cluster", description: "Apply manifests to K8s", isCompleted: false },
+        { title: "Verify Deployment", description: "Check pods and services", isCompleted: false }
       ]
     },
     {
       id: "devops-3",
-      title: "API Monitoring & Observability",
-      description: "Implement comprehensive monitoring, logging, and alerting for production APIs.",
-      difficulty: "advanced",
-      category: "monitoring",
-      dockerfileTemplate: `# Monitoring stack configuration`,
-      cicdConfig: `version: '3.8'
-services:
-  api:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-    depends_on:
-      - prometheus
-      - grafana
-  
-  prometheus:
-    image: prom/prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-  
-  grafana:
-    image: grafana/grafana
-    ports:
-      - "3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin`,
-      deploymentUrl: undefined,
-      monitoringEndpoints: ["/metrics", "/health", "/api/status"],
-      xpReward: 500,
-      estimatedTime: 75,
-      completedCount: 156,
+      title: "CI/CD Pipeline Setup",
+      description: "Build a complete CI/CD pipeline with testing, building, and deployment automation.",
+      difficulty: "intermediate",
+      category: "automation",
+      dockerfileTemplate: `FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "run", "serve"]`,
+      cicdConfig: `name: CI/CD Pipeline
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      - run: docker build -t app .
+      - run: docker push app:${{ github.sha }}
+      - run: kubectl set image deployment/app app=app:${{ github.sha }}`,
+      monitoringEndpoints: ["/health", "/metrics"],
+      xpReward: 600,
+      estimatedTime: 60,
+      completedCount: 234,
       isActive: true,
       requirements: [
-        "Implement metrics collection",
-        "Set up Prometheus monitoring",
-        "Create Grafana dashboards",
-        "Configure alerting rules"
+        "Automated testing",
+        "Build artifacts",
+        "Deployment automation",
+        "Rollback capability"
       ],
       steps: [
-        {
-          title: "Add Metrics Endpoint",
-          description: "Implement /metrics endpoint with Prometheus format",
-          isCompleted: false
-        },
-        {
-          title: "Deploy Monitoring Stack",
-          description: "Set up Prometheus and Grafana with Docker Compose",
-          isCompleted: false
-        },
-        {
-          title: "Create Dashboards",
-          description: "Build comprehensive monitoring dashboards",
-          isCompleted: false
-        },
-        {
-          title: "Configure Alerts",
-          description: "Set up alerting for critical metrics and errors",
-          isCompleted: false
-        }
+        { title: "Setup Testing", description: "Configure automated tests", isCompleted: false },
+        { title: "Build Pipeline", description: "Create build automation", isCompleted: false },
+        { title: "Deploy Pipeline", description: "Automate deployment process", isCompleted: false },
+        { title: "Monitor Pipeline", description: "Set up pipeline monitoring", isCompleted: false }
       ]
     }
   ];
@@ -296,24 +226,26 @@ services:
   // Mock deployment progress
   const mockProgress: DeploymentProgress = {
     challengeId: selectedChallenge || "",
-    currentStep: 1,
+    currentStep: 2,
     deploymentStatus: "building",
     logs: [
-      "[2025-08-15 22:05:00] Starting deployment process...",
-      "[2025-08-15 22:05:02] Building Docker image...",
-      "[2025-08-15 22:05:15] Image built successfully: api-server:latest",
-      "[2025-08-15 22:05:16] Running container health checks...",
-      "[2025-08-15 22:05:18] Health check passed ✓",
-      "[2025-08-15 22:05:20] Deploying to cloud platform..."
+      "[2025-01-15 22:05:00] Starting deployment process...",
+      "[2025-01-15 22:05:02] Building Docker image...",
+      "[2025-01-15 22:05:15] Image built successfully: api-server:latest",
+      "[2025-01-15 22:05:16] Running container health checks...",
+      "[2025-01-15 22:05:18] Health check passed ✓",
+      "[2025-01-15 22:05:20] Deploying to cloud platform..."
     ],
-    deploymentUrl: undefined,
+    deploymentUrl: "https://api-server-abc123.replit.app",
     healthChecksPassed: true
   };
 
   // Start deployment
   const startDeploymentMutation = useMutation({
     mutationFn: async (data: { challengeId: string; dockerfile: string; cicdConfig: string }) => {
-      return apiRequest("POST", "/api/deployment-challenges/deploy", data);
+      // Simulate deployment process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return { deploymentUrl: "https://api-server-abc123.replit.app", status: "success" };
     },
     onSuccess: (data) => {
       setDeploymentLogs([...deploymentLogs, "Deployment started successfully!"]);
@@ -328,7 +260,9 @@ services:
   // Run health checks
   const runHealthChecksMutation = useMutation({
     mutationFn: async (challengeId: string) => {
-      return apiRequest("POST", `/api/deployment-challenges/${challengeId}/health-check`);
+      // Simulate health check
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return { passedChecks: 4, totalChecks: 4, allPassed: true };
     },
     onSuccess: (data) => {
       toast({
@@ -370,314 +304,298 @@ services:
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case "containerization": return <Container className="h-5 w-5" />;
-      case "orchestration": return <Cloud className="h-5 w-5" />;
-      case "monitoring": return <Monitor className="h-5 w-5" />;
-      case "security": return <Shield className="h-5 w-5" />;
-      case "cicd": return <GitBranch className="h-5 w-5" />;
-      default: return <Zap className="h-5 w-5" />;
+      case "containerization": return <Container className="h-5 w-5 text-blue-600" />;
+      case "orchestration": return <Cloud className="h-5 w-5 text-purple-600" />;
+      case "automation": return <GitBranch className="h-5 w-5 text-green-600" />;
+      case "monitoring": return <Activity className="h-5 w-5 text-orange-600" />;
+      case "security": return <Shield className="h-5 w-5 text-red-600" />;
+      default: return <Zap className="h-5 w-5 text-gray-600" />;
     }
   };
 
-  if (!selectedChallenge) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">DevOps & Deployment Challenges</h2>
-          <p className="text-gray-600">
-            Master containerization, orchestration, CI/CD, and monitoring with real-world deployment scenarios
+  return (
+    <section className="py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">DevOps Challenges</h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Master containerization, orchestration, and deployment automation with hands-on DevOps challenges.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockChallenges.map((challenge) => (
-            <Card 
-              key={challenge.id} 
-              className="hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => {
-                setSelectedChallenge(challenge.id);
-                setDockerfileCode(challenge.dockerfileTemplate);
-                setCicdCode(challenge.cicdConfig);
-              }}
-              data-testid={`challenge-${challenge.id}`}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    {getCategoryIcon(challenge.category)}
-                    <Badge className={getDifficultyColor(challenge.difficulty)}>
-                      {challenge.difficulty}
-                    </Badge>
-                  </div>
-                  <div className="text-right text-sm">
-                    <div className="font-bold text-primary">+{challenge.xpReward} XP</div>
-                    <div className="text-gray-600">{challenge.estimatedTime}m</div>
-                  </div>
-                </div>
-
-                <h3 className="font-bold text-lg text-gray-900 mb-2">{challenge.title}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-3">{challenge.description}</p>
-
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-gray-600">Requirements</span>
-                      <span className="text-gray-600">{challenge.requirements.length} steps</span>
+        {!selectedChallenge && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {mockChallenges.map((challenge) => (
+              <Card
+                key={challenge.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => {
+                  setSelectedChallenge(challenge.id);
+                  setDockerfileCode(challenge.dockerfileTemplate);
+                  setCicdCode(challenge.cicdConfig);
+                }}
+                data-testid={`challenge-${challenge.id}`}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      {getCategoryIcon(challenge.category)}
+                      <Badge className={getDifficultyColor(challenge.difficulty)}>
+                        {challenge.difficulty}
+                      </Badge>
                     </div>
-                    <div className="space-y-1">
-                      {challenge.requirements.slice(0, 2).map((req, index) => (
-                        <div key={index} className="text-xs text-gray-600 flex items-center">
-                          <div className="w-1 h-1 bg-primary rounded-full mr-2"></div>
-                          {req}
+                    <div className="text-right text-sm">
+                      <div className="font-bold text-primary">+{challenge.xpReward} XP</div>
+                      <div className="text-gray-600">{challenge.estimatedTime}m</div>
+                    </div>
+                  </div>
+
+                  <h3 className="font-bold text-lg text-gray-900 mb-2">{challenge.title}</h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">{challenge.description}</p>
+
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                      {challenge.completedCount} completed
+                    </div>
+                    <Button size="sm">
+                      Start Challenge
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {selectedChallengeData && (
+          <div className="grid lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {getCategoryIcon(selectedChallengeData.category)}
+                      <span>{selectedChallengeData.title}</span>
+                      <Badge className={getDifficultyColor(selectedChallengeData.difficulty)}>
+                        {selectedChallengeData.difficulty}
+                      </Badge>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-primary">+{selectedChallengeData.xpReward} XP</div>
+                      <div className="text-sm text-gray-600">{selectedChallengeData.estimatedTime} minutes</div>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-700 mb-6">{selectedChallengeData.description}</p>
+
+                  {/* Progress Steps */}
+                  <div className="space-y-4 mb-6">
+                    <h4 className="font-medium text-gray-900">Challenge Steps</h4>
+                    <div className="space-y-3">
+                      {selectedChallengeData.steps.map((step, index) => (
+                        <div key={index} className="flex items-start space-x-3">
+                          <div className={`
+                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
+                            ${step.isCompleted ? 'bg-green-500 text-white' :
+                              mockProgress.currentStep === index + 1 ? 'bg-blue-500 text-white' :
+                              'bg-gray-200 text-gray-600'}
+                          `}>
+                            {step.isCompleted ? <CheckCircle className="h-4 w-4" /> : index + 1}
+                          </div>
+                          <div className="flex-1">
+                            <h5 className="font-medium text-gray-900">{step.title}</h5>
+                            <p className="text-sm text-gray-600">{step.description}</p>
+                          </div>
                         </div>
                       ))}
-                      {challenge.requirements.length > 2 && (
-                        <div className="text-xs text-gray-500">
-                          +{challenge.requirements.length - 2} more...
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Completed by {challenge.completedCount} developers</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <h4 className="font-medium mb-1">Requirements</h4>
+                      <ul className="text-sm space-y-1">
+                        {selectedChallengeData.requirements.map((req, index) => (
+                          <li key={index}>• {req}</li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
 
-  return (
-    <div className="space-y-6">
-      {/* Challenge Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              setSelectedChallenge(null);
-              setDockerfileCode("");
-              setCicdCode("");
-            }}
-            data-testid="back-to-challenges"
-          >
-            ← Back to Challenges
-          </Button>
-        </div>
-      </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configuration Files</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="dockerfile" className="w-full">
+                    <TabsList>
+                      <TabsTrigger value="dockerfile">Dockerfile</TabsTrigger>
+                      <TabsTrigger value="cicd">CI/CD Config</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="dockerfile">
+                      <CodeEditor
+                        language="dockerfile"
+                        code={dockerfileCode}
+                        readOnly={false}
+                        onChange={setDockerfileCode}
+                      />
+                    </TabsContent>
+                    <TabsContent value="cicd">
+                      <CodeEditor
+                        language="yaml"
+                        code={cicdCode}
+                        readOnly={false}
+                        onChange={setCicdCode}
+                      />
+                    </TabsContent>
+                  </Tabs>
 
-      {selectedChallengeData && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {getCategoryIcon(selectedChallengeData.category)}
-                  <span>{selectedChallengeData.title}</span>
-                  <Badge className={getDifficultyColor(selectedChallengeData.difficulty)}>
-                    {selectedChallengeData.difficulty}
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <div className="font-bold text-primary">+{selectedChallengeData.xpReward} XP</div>
-                  <div className="text-sm text-gray-600">{selectedChallengeData.estimatedTime} minutes</div>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 mb-6">{selectedChallengeData.description}</p>
-              
-              {/* Progress Steps */}
-              <div className="space-y-4 mb-6">
-                <h4 className="font-medium text-gray-900">Challenge Steps</h4>
-                <div className="space-y-3">
-                  {selectedChallengeData.steps.map((step, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <div className={`
-                        w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
-                        ${step.isCompleted 
-                          ? 'bg-green-100 text-green-800' 
-                          : index === mockProgress.currentStep 
-                            ? 'bg-blue-100 text-blue-800' 
-                            : 'bg-gray-100 text-gray-600'
-                        }
-                      `}>
-                        {step.isCompleted ? <CheckCircle className="h-3 w-3" /> : index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-medium text-gray-900">{step.title}</h5>
-                        <p className="text-sm text-gray-600">{step.description}</p>
-                      </div>
+                  <div className="mt-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-900">Deployment Status</h4>
+                      <Badge className={getStatusBadge(mockProgress.deploymentStatus)}>
+                        {mockProgress.deploymentStatus}
+                      </Badge>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              <Tabs defaultValue="dockerfile" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="dockerfile">Dockerfile</TabsTrigger>
-                  <TabsTrigger value="cicd">CI/CD Config</TabsTrigger>
-                  <TabsTrigger value="deployment">Deployment</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="dockerfile" className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Dockerfile Configuration</h4>
-                    <CodeEditor
-                      language="dockerfile"
-                      code={dockerfileCode}
-                      onChange={setDockerfileCode}
-                      readOnly={false}
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="cicd" className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">CI/CD Pipeline</h4>
-                    <CodeEditor
-                      language="yaml"
-                      code={cicdCode}
-                      onChange={setCicdCode}
-                      readOnly={false}
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="deployment" className="space-y-4">
-                  <div className="space-y-6">
-                    {/* Deployment Status */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                          <span className="flex items-center space-x-2">
-                            <Activity className="h-5 w-5 text-blue-500" />
-                            <span>Deployment Status</span>
-                          </span>
-                          <Badge className={getStatusBadge(mockProgress.deploymentStatus)}>
-                            {mockProgress.deploymentStatus}
-                          </Badge>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
+                    {mockProgress.deploymentUrl && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <div className="flex items-center justify-between text-sm mb-2">
-                              <span>Progress</span>
-                              <span>{mockProgress.currentStep}/4 steps</span>
-                            </div>
-                            <Progress value={(mockProgress.currentStep / 4) * 100} />
+                            <div className="font-medium text-green-800">Deployment URL</div>
+                            <code className="text-sm text-green-700">{mockProgress.deploymentUrl}</code>
                           </div>
-
-                          {mockProgress.deploymentUrl && (
-                            <Alert>
-                              <CheckCircle className="h-4 w-4" />
-                              <AlertDescription>
-                                <strong>Deployment successful!</strong> Your application is running at:{" "}
-                                <a 
-                                  href={mockProgress.deploymentUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-primary hover:underline"
-                                >
-                                  {mockProgress.deploymentUrl}
-                                </a>
-                              </AlertDescription>
-                            </Alert>
-                          )}
-
-                          <div className="flex space-x-3">
-                            <Button
-                              onClick={() => startDeploymentMutation.mutate({
-                                challengeId: selectedChallenge,
-                                dockerfile: dockerfileCode,
-                                cicdConfig: cicdCode
-                              })}
-                              disabled={startDeploymentMutation.isPending || !dockerfileCode.trim()}
-                              data-testid="start-deployment"
-                            >
-                              <Play className="h-4 w-4 mr-2" />
-                              {startDeploymentMutation.isPending ? "Deploying..." : "Start Deployment"}
-                            </Button>
-                            
-                            <Button
-                              variant="outline"
-                              onClick={() => runHealthChecksMutation.mutate(selectedChallenge)}
-                              disabled={runHealthChecksMutation.isPending || !mockProgress.deploymentUrl}
-                              data-testid="run-health-checks"
-                            >
-                              <Monitor className="h-4 w-4 mr-2" />
-                              Run Health Checks
-                            </Button>
-                          </div>
+                          <Button size="sm" variant="outline">
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Visit
+                          </Button>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    )}
 
-                    {/* Deployment Logs */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                          <Container className="h-5 w-5 text-gray-500" />
-                          <span>Deployment Logs</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="bg-black rounded-lg p-4 font-mono text-sm text-green-400 h-64 overflow-y-auto">
-                          {mockProgress.logs.map((log, index) => (
-                            <div key={index} className="mb-1">
-                              {log}
-                            </div>
-                          ))}
-                          {mockProgress.logs.length === 0 && (
-                            <div className="text-gray-500">No deployment logs yet. Start a deployment to see logs here.</div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <div className="flex space-x-3">
+                      <Button
+                        onClick={() => startDeploymentMutation.mutate({
+                          challengeId: selectedChallenge!,
+                          dockerfile: dockerfileCode,
+                          cicdConfig: cicdCode
+                        })}
+                        disabled={startDeploymentMutation.isPending || !dockerfileCode.trim()}
+                        data-testid="start-deployment"
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        {startDeploymentMutation.isPending ? "Deploying..." : "Start Deployment"}
+                      </Button>
 
-                    {/* Monitoring Endpoints */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                          <Monitor className="h-5 w-5 text-secondary" />
-                          <span>Monitoring & Health Checks</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {selectedChallengeData.monitoringEndpoints.map((endpoint, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                              <div>
-                                <code className="text-sm bg-gray-100 px-2 py-1 rounded">{endpoint}</code>
-                                <div className="text-xs text-gray-600 mt-1">
-                                  {endpoint === "/health" && "Application health status"}
-                                  {endpoint === "/metrics" && "Prometheus metrics endpoint"}
-                                  {endpoint === "/ready" && "Readiness probe endpoint"}
-                                  {endpoint === "/api/status" && "API status and version info"}
-                                </div>
-                              </div>
-                              <Badge 
-                                className={mockProgress.healthChecksPassed ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
-                              >
-                                {mockProgress.healthChecksPassed ? "Healthy" : "Unknown"}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+                      <Button
+                        variant="outline"
+                        onClick={() => runHealthChecksMutation.mutate(selectedChallenge!)}
+                        disabled={runHealthChecksMutation.isPending || !mockProgress.deploymentUrl}
+                        data-testid="run-health-checks"
+                      >
+                        <Monitor className="h-4 w-4 mr-2" />
+                        Run Health Checks
+                      </Button>
+                    </div>
                   </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </>
-      )}
-    </div>
+                </CardContent>
+              </Card>
+
+              {/* Deployment Logs */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Deployment Logs</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm max-h-64 overflow-y-auto">
+                    {mockProgress.logs.map((log, index) => (
+                      <div key={index} className="mb-1">{log}</div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Monitor className="h-5 w-5 text-secondary" />
+                    <span>Monitoring & Health Checks</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {selectedChallengeData.monitoringEndpoints.map((endpoint, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                        <div>
+                          <code className="text-sm bg-gray-100 px-2 py-1 rounded">{endpoint}</code>
+                          <div className="text-xs text-gray-600 mt-1">
+                            {endpoint === "/health" && "Application health status"}
+                            {endpoint === "/metrics" && "Prometheus metrics endpoint"}
+                            {endpoint === "/ready" && "Readiness probe endpoint"}
+                            {endpoint === "/api/status" && "API status and version info"}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {mockProgress.healthChecksPassed ? "✓" : "⏳"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>📚 DevOps Resources</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <Button variant="ghost" className="w-full justify-start">
+                      <Container className="h-4 w-4 mr-2" />
+                      Docker Documentation
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <Cloud className="h-4 w-4 mr-2" />
+                      Kubernetes Guide
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <GitBranch className="h-4 w-4 mr-2" />
+                      CI/CD Best Practices
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>🎯 Challenge Progress</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span>Overall Progress</span>
+                      <span>{mockProgress.currentStep}/4 steps</span>
+                    </div>
+                    <Progress value={(mockProgress.currentStep / 4) * 100} />
+                    <Button
+                      className="w-full"
+                      onClick={() => setSelectedChallenge(null)}
+                    >
+                      Back to Challenges
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
