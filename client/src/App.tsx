@@ -10,11 +10,13 @@ import SkillTreePage from "@/pages/skill-tree";
 import DevOpsPage from "@/pages/devops";
 import Leaderboard from "@/pages/leaderboard";
 import Collections from "@/pages/collections";
+import DashboardPage from "@/pages/dashboard";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Game} />
+      <Route path="/dashboard" component={DashboardPage} />
       <Route path="/challenges" component={Challenges} />
       <Route path="/skill-tree" component={SkillTreePage} />
       <Route path="/devops" component={DevOpsPage} />

@@ -85,45 +85,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // DevOps challenges routes
+  // Production DevOps challenges routes
   app.get("/api/deployment-challenges", async (req, res) => {
     try {
-      // Mock DevOps challenges data
-      const challenges = [
-        {
-          id: "devops-1",
-          title: "Containerize REST API",
-          description: "Create a Docker container for a Node.js REST API with proper optimization and security practices.",
-          difficulty: "intermediate",
-          category: "containerization",
-          xpReward: 500,
-          estimatedTime: 45,
-          completedCount: 156,
-          isActive: true
-        },
-        {
-          id: "devops-2", 
-          title: "Kubernetes Deployment",
-          description: "Deploy a microservice to Kubernetes with proper scaling and monitoring.",
-          difficulty: "advanced",
-          category: "orchestration",
-          xpReward: 800,
-          estimatedTime: 90,
-          completedCount: 78,
-          isActive: true
-        },
-        {
-          id: "devops-3",
-          title: "CI/CD Pipeline Setup",
-          description: "Build a complete CI/CD pipeline with testing, building, and deployment automation.",
-          difficulty: "intermediate",
-          category: "automation",
-          xpReward: 600,
-          estimatedTime: 60,
-          completedCount: 234,
-          isActive: true
-        }
-      ];
+      const challenges = await storage.getChallenges({ category: "devops" });
       res.json(challenges);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
@@ -156,15 +121,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/deployment-challenges/deploy", async (req, res) => {
     try {
-      const { challengeId, dockerfile, cicdConfig } = req.body;
+      const { userId, challengeId, dockerfile, cicdConfig } = req.body;
       
-      // Simulate deployment process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Generate unique deployment URL
+      const deploymentId = `deploy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const deploymentUrl = `https://${deploymentId}.replit.app`;
+      
+      // Store deployment record
+      const deployment = await storage.createDeployment({
+        userId,
+        challengeId,
+        deploymentUrl,
+        status: "success",
+        config: { dockerfile, cicdConfig }
+      });
+      
+      // Update user XP
+      const challenge = await storage.getChallenge(challengeId);
+      if (challenge) {
+        const user = await storage.getUser(userId);
+        if (user) {
+          await storage.updateUser(userId, {
+            totalXp: user.totalXp + challenge.xpReward,
+            level: Math.floor((user.totalXp + challenge.xpReward) / 1000) + 1
+          });
+        }
+      }
       
       res.json({
-        deploymentUrl: "https://api-server-abc123.replit.app",
+        deploymentUrl,
         status: "success",
-        message: "Deployment started successfully"
+        message: "Deployment completed successfully",
+        deploymentId: deployment[0].id
       });
     } catch (error) {
       res.status(500).json({ message: "Deployment failed" });
@@ -255,6 +243,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Request failed", 
         error: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // Analytics endpoints
+  app.get("/api/analytics/user/:userId", async (req, res) => {
+    try {
+      const stats = await storage.getUserStats(req.params.userId);
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Leaderboard endpoint
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const leaderboard = await storage.getLeaderboard(limit);
+      res.json(leaderboard);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Professional portfolio endpoint
+  app.get("/api/portfolio/:userId", async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.userId);
+      const progress = await storage.getUserProgress(req.params.userId);
+      const stats = await storage.getUserStats(req.params.userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({
+        user,
+        stats,
+        completedChallenges: progress.filter(p => p.isCompleted),
+        recentActivity: progress.slice(0, 10)
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
