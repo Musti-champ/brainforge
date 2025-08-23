@@ -1,13 +1,15 @@
 import { eq, and, desc, asc } from "drizzle-orm";
 import { db } from "./db";
-import { users, challenges, userProgress, userAchievements, skills, challengeSkills } from "@shared/schema";
+import { users, challenges, userProgress, achievements } from "@shared/schema";
 import type {
   InsertUser,
   InsertChallenge,
   InsertUserProgress,
   User,
   Challenge,
-  UserProgress
+  UserProgress,
+  Achievement,
+  InsertAchievement
 } from "@shared/schema";
 
 export class ProductionStorage {
@@ -107,21 +109,17 @@ export class ProductionStorage {
     return progress || null;
   }
 
-  // Achievement operations (stubbed for now, assuming schema exists)
-  async getUserAchievements(userId: string): Promise<any[]> {
-     // Placeholder: Replace with actual DB query for achievements
+  // Achievement operations
+  async getUserAchievements(userId: string): Promise<Achievement[]> {
     return await db.select()
-      .from(userAchievements)
-      .where(eq(userAchievements.userId, userId));
+      .from(achievements)
+      .where(eq(achievements.userId, userId));
   }
 
-  async createAchievement(achievementData: any): Promise<any> {
-     // Placeholder: Replace with actual DB insert for achievements
-    const [achievement] = await db.insert(userAchievements).values({
+  async createAchievement(achievementData: InsertAchievement): Promise<Achievement> {
+    const [achievement] = await db.insert(achievements).values({
       ...achievementData,
       id: achievementData.id || `achievement-${Date.now()}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     }).returning();
     return achievement;
   }
