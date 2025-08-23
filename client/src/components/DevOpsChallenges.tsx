@@ -201,8 +201,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: docker build -t app .
-      - run: docker push app:${{ github.sha }}
-      - run: kubectl set image deployment/app app=app:${{ github.sha }}`,
+      - run: docker push app:\${{ github.sha }}
+      - run: kubectl set image deployment/app app=app:\${{ github.sha }}`,
       monitoringEndpoints: ["/health", "/metrics"],
       xpReward: 600,
       estimatedTime: 60,
