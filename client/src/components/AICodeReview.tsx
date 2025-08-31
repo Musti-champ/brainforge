@@ -1,481 +1,522 @@
+
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Brain, CheckCircle, AlertTriangle, Info, Lightbulb, Star, TrendingUp } from "lucide-react";
+import { Brain, CheckCircle, AlertTriangle, XCircle, Lightbulb, Zap, Code, FileText, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
-interface CodeReviewResult {
+interface CodeIssue {
+  id: string;
+  type: "error" | "warning" | "suggestion" | "security";
+  severity: "high" | "medium" | "low";
+  title: string;
+  description: string;
+  line?: number;
+  column?: number;
+  codeSnippet?: string;
+  suggestion?: string;
+  category: string;
+}
+
+interface CodeReview {
+  id: string;
   overallScore: number;
-  codeQuality: {
-    score: number;
-    issues: Array<{
-      type: "error" | "warning" | "suggestion";
-      line: number;
-      message: string;
-      suggestion: string;
-    }>;
-  };
-  bestPractices: {
-    score: number;
-    feedback: string[];
-    improvements: string[];
-  };
-  performance: {
-    score: number;
-    optimizations: string[];
-    complexity: string;
-  };
-  security: {
+  issues: CodeIssue[];
+  strengths: string[];
+  recommendations: string[];
+  performanceInsights: string[];
+  securityAnalysis: {
     score: number;
     vulnerabilities: string[];
     recommendations: string[];
   };
-  learningPoints: {
-    strengths: string[];
-    areasToImprove: string[];
-    nextSteps: string[];
+  codeQuality: {
+    readability: number;
+    maintainability: number;
+    efficiency: number;
+    testability: number;
   };
-  personalizedTips: string[];
+  estimatedReviewTime: number;
+  language: string;
+  complexity: "low" | "medium" | "high";
 }
 
-export default function AICodeReview({ 
-  code, 
-  challengeId, 
-  userSkillLevel 
-}: { 
-  code: string; 
-  challengeId: string; 
-  userSkillLevel: number;
-}) {
-  const [reviewResult, setReviewResult] = useState<CodeReviewResult | null>(null);
+export default function AICodeReview({ challengeId }: { challengeId?: string }) {
+  const [code, setCode] = useState("");
+  const [language, setLanguage] = useState("javascript");
+  const [reviewType, setReviewType] = useState("comprehensive");
+  const [review, setReview] = useState<CodeReview | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState<CodeIssue | null>(null);
+  const { toast } = useToast();
 
-  const reviewCodeMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/ai/code-review", {
-        code,
-        challengeId,
-        userSkillLevel
-      });
-    },
-    onSuccess: (data) => {
-      setReviewResult(data);
-    },
-  });
+  // Mock AI code review
+  const performReview = async () => {
+    setIsReviewing(true);
+    
+    // Simulate AI processing time
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
-  // Mock AI review result for demonstration
-  const getMockReviewResult = (): CodeReviewResult => {
-    return {
-      overallScore: 78,
-      codeQuality: {
-        score: 85,
-        issues: [
-          {
-            type: "warning",
-            line: 5,
-            message: "Consider using const instead of let for immutable variables",
-            suggestion: "const response = await fetch(url);"
-          },
-          {
-            type: "suggestion", 
-            line: 12,
-            message: "Add error handling for the JSON parsing",
-            suggestion: "try { const data = await response.json(); } catch (error) { /* handle error */ }"
-          }
-        ]
-      },
-      bestPractices: {
-        score: 72,
-        feedback: [
-          "Good use of async/await syntax",
-          "Proper variable naming conventions",
-          "Missing error handling in critical sections"
-        ],
-        improvements: [
-          "Add comprehensive error handling",
-          "Consider adding input validation",
-          "Include logging for debugging purposes"
-        ]
-      },
-      performance: {
-        score: 80,
-        optimizations: [
-          "Consider caching API responses for repeated calls",
-          "Use request timeout to prevent hanging requests"
-        ],
-        complexity: "Low - code is well-structured and readable"
-      },
-      security: {
-        score: 75,
+    // Generate mock review based on code content
+    const mockReview: CodeReview = {
+      id: `review-${Date.now()}`,
+      overallScore: Math.floor(Math.random() * 30) + 70, // 70-100 score
+      issues: [
+        {
+          id: "issue-1",
+          type: "warning",
+          severity: "medium",
+          title: "Missing Error Handling",
+          description: "The fetch request doesn't have proper error handling for network failures or invalid responses.",
+          line: 5,
+          column: 3,
+          codeSnippet: "fetch('https://api.example.com/data')",
+          suggestion: "Add try-catch blocks and check response.ok before parsing JSON",
+          category: "Error Handling"
+        },
+        {
+          id: "issue-2",
+          type: "suggestion",
+          severity: "low",
+          title: "Consider Using Async/Await",
+          description: "The promise chain could be simplified using async/await syntax for better readability.",
+          line: 3,
+          column: 1,
+          codeSnippet: ".then(response => response.json()).then(data => {",
+          suggestion: "const response = await fetch(url); const data = await response.json();",
+          category: "Code Style"
+        },
+        {
+          id: "issue-3",
+          type: "security",
+          severity: "high",
+          title: "Potential XSS Vulnerability",
+          description: "Direct DOM manipulation with user input could lead to cross-site scripting attacks.",
+          line: 12,
+          column: 5,
+          codeSnippet: "element.innerHTML = userInput;",
+          suggestion: "Use textContent or properly sanitize the input before setting innerHTML",
+          category: "Security"
+        },
+        {
+          id: "issue-4",
+          type: "error",
+          severity: "high",
+          title: "Undefined Variable Reference",
+          description: "Variable 'apiKey' is used but never declared in this scope.",
+          line: 8,
+          column: 15,
+          codeSnippet: "headers: { 'Authorization': `Bearer ${apiKey}` }",
+          suggestion: "Declare apiKey variable or pass it as a parameter",
+          category: "Syntax"
+        }
+      ],
+      strengths: [
+        "Good use of modern JavaScript features",
+        "Consistent code formatting and indentation",
+        "Appropriate use of const/let declarations",
+        "Clear variable naming conventions"
+      ],
+      recommendations: [
+        "Add comprehensive error handling for all API calls",
+        "Implement input validation before processing user data",
+        "Consider adding unit tests for the API integration logic",
+        "Use environment variables for sensitive configuration"
+      ],
+      performanceInsights: [
+        "API calls could be optimized with caching mechanisms",
+        "Consider implementing request debouncing for user interactions",
+        "Memory usage is within acceptable limits"
+      ],
+      securityAnalysis: {
+        score: 65,
         vulnerabilities: [
-          "API endpoint URL should be validated",
-          "Consider rate limiting for API calls"
+          "Potential XSS vulnerability in DOM manipulation",
+          "Missing input sanitization",
+          "Hardcoded API endpoints could expose sensitive information"
         ],
         recommendations: [
-          "Validate all external inputs",
-          "Use environment variables for sensitive data",
-          "Implement proper authentication headers"
+          "Implement Content Security Policy (CSP)",
+          "Use parameterized queries for database operations",
+          "Store sensitive configuration in environment variables"
         ]
       },
-      learningPoints: {
-        strengths: [
-          "Clean and readable code structure",
-          "Proper use of modern JavaScript features",
-          "Good understanding of API interaction patterns"
-        ],
-        areasToImprove: [
-          "Error handling and edge cases",
-          "Security best practices",
-          "Performance optimization techniques"
-        ],
-        nextSteps: [
-          "Learn about try/catch error handling",
-          "Study API security principles",
-          "Practice with more complex API scenarios"
-        ]
+      codeQuality: {
+        readability: 85,
+        maintainability: 78,
+        efficiency: 82,
+        testability: 70
       },
-      personalizedTips: [
-        "Based on your skill level, focus on mastering error handling patterns",
-        "Try implementing the suggested improvements in your next challenge",
-        "Consider exploring API caching strategies for better performance"
-      ]
+      estimatedReviewTime: 12,
+      language: language,
+      complexity: code.length > 500 ? "high" : code.length > 200 ? "medium" : "low"
     };
-  };
 
-  const handleReviewCode = () => {
-    // For demo purposes, use mock data immediately
-    setTimeout(() => {
-      setReviewResult(getMockReviewResult());
-    }, 1500);
+    setReview(mockReview);
+    setIsReviewing(false);
     
-    // Uncomment below for real AI integration
-    // reviewCodeMutation.mutate();
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return "text-green-600";
-    if (score >= 75) return "text-blue-600";
-    if (score >= 60) return "text-amber-600";
-    return "text-red-600";
-  };
-
-  const getScoreBadgeColor = (score: number) => {
-    if (score >= 90) return "bg-green-100 text-green-800";
-    if (score >= 75) return "bg-blue-100 text-blue-800";
-    if (score >= 60) return "bg-amber-100 text-amber-800";
-    return "bg-red-100 text-red-800";
+    toast({
+      title: "Code Review Complete",
+      description: `Found ${mockReview.issues.length} issues. Overall score: ${mockReview.overallScore}/100`,
+    });
   };
 
   const getIssueIcon = (type: string) => {
     switch (type) {
-      case "error":
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case "warning":
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-      case "suggestion":
-        return <Info className="h-4 w-4 text-blue-500" />;
-      default:
-        return <Info className="h-4 w-4 text-gray-500" />;
+      case "error": return <XCircle className="h-4 w-4 text-red-500" />;
+      case "warning": return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      case "security": return <XCircle className="h-4 w-4 text-red-600" />;
+      case "suggestion": return <Lightbulb className="h-4 w-4 text-blue-500" />;
+      default: return <CheckCircle className="h-4 w-4 text-gray-400" />;
     }
   };
 
-  if (!reviewResult) {
-    return (
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "high": return "bg-red-100 text-red-800";
+      case "medium": return "bg-amber-100 text-amber-800";
+      case "low": return "bg-blue-100 text-blue-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return "text-green-600";
+    if (score >= 75) return "text-amber-600";
+    return "text-red-600";
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">AI Code Review</h2>
+        <p className="text-gray-600">
+          Get instant feedback on your code quality, security, and performance
+        </p>
+      </div>
+
+      {/* Code Input Section */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Brain className="h-5 w-5 text-primary" />
-            <span>AI Code Review</span>
+            <span>Submit Code for Review</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center space-y-4">
-            <p className="text-gray-600">
-              Get personalized feedback on your code from our AI reviewer. 
-              Improve your skills with detailed analysis and suggestions.
-            </p>
-            <Button 
-              onClick={handleReviewCode}
-              disabled={reviewCodeMutation.isPending || !code.trim()}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Programming Language
+                </label>
+                <Select value={language} onValueChange={setLanguage}>
+                  <SelectTrigger data-testid="language-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="javascript">JavaScript</SelectItem>
+                    <SelectItem value="python">Python</SelectItem>
+                    <SelectItem value="java">Java</SelectItem>
+                    <SelectItem value="csharp">C#</SelectItem>
+                    <SelectItem value="go">Go</SelectItem>
+                    <SelectItem value="rust">Rust</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Review Type
+                </label>
+                <Select value={reviewType} onValueChange={setReviewType}>
+                  <SelectTrigger data-testid="review-type-select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="comprehensive">Comprehensive Review</SelectItem>
+                    <SelectItem value="security">Security-Focused</SelectItem>
+                    <SelectItem value="performance">Performance Analysis</SelectItem>
+                    <SelectItem value="style">Code Style & Quality</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your Code
+              </label>
+              <Textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder={`// Paste your ${language} code here for AI review...
+function fetchWeatherData(city) {
+  fetch(\`https://api.openweathermap.org/data/2.5/weather?q=\${city}&appid=\${apiKey}\`)
+    .then(response => response.json())
+    .then(data => {
+      displayWeather(data);
+    });
+}
+
+function displayWeather(data) {
+  const temp = data.main.temp - 273.15;
+  document.getElementById('temperature').innerHTML = \`\${temp}°C\`;
+}`}
+                rows={12}
+                className="font-mono text-sm"
+                data-testid="code-input"
+              />
+            </div>
+
+            <Button
+              onClick={performReview}
+              disabled={!code.trim() || isReviewing}
               className="w-full"
-              data-testid="start-review"
+              data-testid="review-code"
             >
-              {reviewCodeMutation.isPending ? (
+              {isReviewing ? (
                 <>
-                  <Brain className="h-4 w-4 mr-2 animate-pulse" />
-                  Analyzing Code...
+                  <Zap className="h-4 w-4 mr-2 animate-pulse" />
+                  AI Analyzing Code...
                 </>
               ) : (
                 <>
                   <Brain className="h-4 w-4 mr-2" />
-                  Start AI Review
+                  Review My Code
                 </>
               )}
             </Button>
           </div>
         </CardContent>
       </Card>
-    );
-  }
 
-  return (
-    <div className="space-y-6">
-      {/* Overall Score */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">
-            <div className={`text-4xl font-bold ${getScoreColor(reviewResult.overallScore)} mb-2`}>
-              {reviewResult.overallScore}%
-            </div>
-            <div className="text-gray-600 mb-4">Overall Code Quality Score</div>
-            <Progress value={reviewResult.overallScore} className="w-full" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Detailed Analysis */}
-      <Tabs defaultValue="quality" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="quality">Quality</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="learning">Learning</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="quality" className="space-y-4">
+      {/* Review Results */}
+      {review && (
+        <div className="space-y-6">
+          {/* Overall Score */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Code Quality Analysis</span>
-                <Badge className={getScoreBadgeColor(reviewResult.codeQuality.score)}>
-                  {reviewResult.codeQuality.score}%
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Progress value={reviewResult.codeQuality.score} />
-                
-                {reviewResult.codeQuality.issues.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Issues Found</h4>
-                    <div className="space-y-3">
-                      {reviewResult.codeQuality.issues.map((issue, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-3">
-                          <div className="flex items-start space-x-3">
-                            {getIssueIcon(issue.type)}
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <span className="text-sm font-medium">Line {issue.line}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {issue.type}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-gray-700 mb-2">{issue.message}</p>
-                              <div className="bg-gray-50 p-2 rounded text-xs font-mono">
-                                {issue.suggestion}
-                              </div>
+            <CardContent className="p-6">
+              <div className="text-center mb-6">
+                <div className={`text-4xl font-bold mb-2 ${getScoreColor(review.overallScore)}`}>
+                  {review.overallScore}/100
+                </div>
+                <div className="text-lg font-medium text-gray-700">Overall Code Quality Score</div>
+                <div className="text-sm text-gray-500">Review completed in {review.estimatedReviewTime} seconds</div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{review.codeQuality.readability}%</div>
+                  <div className="text-sm text-gray-600">Readability</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{review.codeQuality.maintainability}%</div>
+                  <div className="text-sm text-gray-600">Maintainability</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-amber-600">{review.codeQuality.efficiency}%</div>
+                  <div className="text-sm text-gray-600">Efficiency</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">{review.codeQuality.testability}%</div>
+                  <div className="text-sm text-gray-600">Testability</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Tabs defaultValue="issues" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="issues">Issues ({review.issues.length})</TabsTrigger>
+              <TabsTrigger value="security">Security</TabsTrigger>
+              <TabsTrigger value="strengths">Strengths</TabsTrigger>
+              <TabsTrigger value="recommendations">Tips</TabsTrigger>
+              <TabsTrigger value="performance">Performance</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="issues" className="space-y-4">
+              <div className="space-y-3">
+                {review.issues.map((issue) => (
+                  <Card 
+                    key={issue.id} 
+                    className={`cursor-pointer transition-all ${
+                      selectedIssue?.id === issue.id ? 'ring-2 ring-primary' : 'hover:shadow-md'
+                    }`}
+                    onClick={() => setSelectedIssue(selectedIssue?.id === issue.id ? null : issue)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start space-x-3">
+                        {getIssueIcon(issue.type)}
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-900">{issue.title}</h4>
+                            <div className="flex items-center space-x-2">
+                              <Badge className={getSeverityColor(issue.severity)}>
+                                {issue.severity}
+                              </Badge>
+                              <Badge variant="outline">{issue.category}</Badge>
                             </div>
                           </div>
+                          <p className="text-sm text-gray-600 mb-2">{issue.description}</p>
+                          {issue.line && (
+                            <div className="text-xs text-gray-500">
+                              Line {issue.line}, Column {issue.column}
+                            </div>
+                          )}
+                          
+                          {selectedIssue?.id === issue.id && (
+                            <div className="mt-4 space-y-3 border-t pt-3">
+                              {issue.codeSnippet && (
+                                <div>
+                                  <h5 className="text-sm font-medium text-gray-700 mb-1">Code:</h5>
+                                  <pre className="bg-red-50 border border-red-200 rounded p-2 text-xs">
+                                    <code>{issue.codeSnippet}</code>
+                                  </pre>
+                                </div>
+                              )}
+                              {issue.suggestion && (
+                                <div>
+                                  <h5 className="text-sm font-medium text-gray-700 mb-1">Suggested Fix:</h5>
+                                  <pre className="bg-green-50 border border-green-200 rounded p-2 text-xs">
+                                    <code>{issue.suggestion}</code>
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="security" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Security Analysis</span>
+                    <div className={`text-2xl font-bold ${getScoreColor(review.securityAnalysis.score)}`}>
+                      {review.securityAnalysis.score}/100
                     </div>
-                  </div>
-                )}
-                
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Best Practices</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <Progress value={review.securityAnalysis.score} className="h-2" />
+                    
                     <div>
-                      <h5 className="text-sm font-medium text-green-700 mb-2">✓ Good Practices</h5>
+                      <h4 className="font-medium text-gray-900 mb-2">Vulnerabilities Found</h4>
                       <ul className="space-y-1">
-                        {reviewResult.bestPractices.feedback.map((item, index) => (
-                          <li key={index} className="text-sm text-gray-600 flex items-start">
-                            <CheckCircle className="h-3 w-3 text-green-500 mt-1 mr-2 flex-shrink-0" />
-                            {item}
+                        {review.securityAnalysis.vulnerabilities.map((vuln, index) => (
+                          <li key={index} className="flex items-start text-sm">
+                            <XCircle className="h-4 w-4 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                            {vuln}
                           </li>
                         ))}
                       </ul>
                     </div>
+
                     <div>
-                      <h5 className="text-sm font-medium text-amber-700 mb-2">⚡ Improvements</h5>
+                      <h4 className="font-medium text-gray-900 mb-2">Security Recommendations</h4>
                       <ul className="space-y-1">
-                        {reviewResult.bestPractices.improvements.map((item, index) => (
-                          <li key={index} className="text-sm text-gray-600 flex items-start">
-                            <TrendingUp className="h-3 w-3 text-amber-500 mt-1 mr-2 flex-shrink-0" />
-                            {item}
+                        {review.securityAnalysis.recommendations.map((rec, index) => (
+                          <li key={index} className="flex items-start text-sm">
+                            <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                            {rec}
                           </li>
                         ))}
                       </ul>
                     </div>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        <TabsContent value="performance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Performance Analysis</span>
-                <Badge className={getScoreBadgeColor(reviewResult.performance.score)}>
-                  {reviewResult.performance.score}%
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Progress value={reviewResult.performance.score} />
-                
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Complexity Assessment</h4>
-                  <p className="text-sm text-gray-600">{reviewResult.performance.complexity}</p>
-                </div>
-                
-                {reviewResult.performance.optimizations.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Optimization Suggestions</h4>
-                    <ul className="space-y-2">
-                      {reviewResult.performance.optimizations.map((optimization, index) => (
-                        <li key={index} className="text-sm text-gray-600 flex items-start">
-                          <Star className="h-3 w-3 text-blue-500 mt-1 mr-2 flex-shrink-0" />
-                          {optimization}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="security" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Security Analysis</span>
-                <Badge className={getScoreBadgeColor(reviewResult.security.score)}>
-                  {reviewResult.security.score}%
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Progress value={reviewResult.security.score} />
-                
-                {reviewResult.security.vulnerabilities.length > 0 && (
-                  <Alert>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>Security Considerations:</strong>
-                      <ul className="mt-2 space-y-1">
-                        {reviewResult.security.vulnerabilities.map((vuln, index) => (
-                          <li key={index} className="text-sm">• {vuln}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Security Recommendations</h4>
+            <TabsContent value="strengths" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Star className="h-5 w-5 text-yellow-500" />
+                    <span>Code Strengths</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
                   <ul className="space-y-2">
-                    {reviewResult.security.recommendations.map((rec, index) => (
-                      <li key={index} className="text-sm text-gray-600 flex items-start">
-                        <CheckCircle className="h-3 w-3 text-green-500 mt-1 mr-2 flex-shrink-0" />
-                        {rec}
+                    {review.strengths.map((strength, index) => (
+                      <li key={index} className="flex items-start">
+                        <CheckCircle className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm">{strength}</span>
                       </li>
                     ))}
                   </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        <TabsContent value="learning" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Lightbulb className="h-5 w-5 text-accent" />
-                <span>Personalized Learning Insights</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium text-green-700 mb-3">🎯 Your Strengths</h4>
-                    <ul className="space-y-2">
-                      {reviewResult.learningPoints.strengths.map((strength, index) => (
-                        <li key={index} className="text-sm text-gray-600">
-                          • {strength}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-amber-700 mb-3">📈 Areas to Improve</h4>
-                    <ul className="space-y-2">
-                      {reviewResult.learningPoints.areasToImprove.map((area, index) => (
-                        <li key={index} className="text-sm text-gray-600">
-                          • {area}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-blue-700 mb-3">🚀 Next Steps</h4>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <ul className="space-y-2">
-                      {reviewResult.learningPoints.nextSteps.map((step, index) => (
-                        <li key={index} className="text-sm text-blue-800">
-                          {index + 1}. {step}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-purple-700 mb-3">💡 Personalized Tips</h4>
-                  <div className="space-y-3">
-                    {reviewResult.personalizedTips.map((tip, index) => (
-                      <div key={index} className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                        <p className="text-sm text-purple-800">{tip}</p>
-                      </div>
+            <TabsContent value="recommendations" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Lightbulb className="h-5 w-5 text-blue-500" />
+                    <span>Improvement Recommendations</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {review.recommendations.map((rec, index) => (
+                      <li key={index} className="border-l-4 border-blue-200 pl-4">
+                        <span className="text-sm">{rec}</span>
+                      </li>
                     ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  </ul>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-      {/* Action Buttons */}
-      <div className="flex space-x-3">
-        <Button 
-          onClick={handleReviewCode}
-          variant="outline"
-          data-testid="review-again"
-        >
-          Review Again
-        </Button>
-        <Button data-testid="save-feedback">
-          Save Feedback
-        </Button>
-      </div>
+            <TabsContent value="performance" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Zap className="h-5 w-5 text-amber-500" />
+                    <span>Performance Insights</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        <strong>Code Complexity:</strong> {review.complexity.charAt(0).toUpperCase() + review.complexity.slice(1)} 
+                        - Consider breaking down large functions for better maintainability.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <ul className="space-y-2">
+                      {review.performanceInsights.map((insight, index) => (
+                        <li key={index} className="flex items-start">
+                          <Zap className="h-4 w-4 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{insight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      )}
     </div>
   );
 }

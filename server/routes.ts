@@ -85,101 +85,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Production DevOps challenges routes
-  app.get("/api/deployment-challenges", async (req, res) => {
-    try {
-      const challenges = await storage.getChallenges({ category: "devops" });
-      res.json(challenges);
-    } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.get("/api/deployment-progress/:challengeId", async (req, res) => {
-    try {
-      // Mock deployment progress
-      const progress = {
-        challengeId: req.params.challengeId,
-        currentStep: 2,
-        deploymentStatus: "building",
-        logs: [
-          "[2025-01-15 22:05:00] Starting deployment process...",
-          "[2025-01-15 22:05:02] Building Docker image...",
-          "[2025-01-15 22:05:15] Image built successfully: api-server:latest",
-          "[2025-01-15 22:05:16] Running container health checks...",
-          "[2025-01-15 22:05:18] Health check passed ✓",
-          "[2025-01-15 22:05:20] Deploying to cloud platform..."
-        ],
-        deploymentUrl: "https://api-server-abc123.replit.app",
-        healthChecksPassed: true
-      };
-      res.json(progress);
-    } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.post("/api/deployment-challenges/deploy", async (req, res) => {
-    try {
-      const { userId, challengeId, dockerfile, cicdConfig } = req.body;
-      
-      // Generate unique deployment URL
-      const deploymentId = `deploy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const deploymentUrl = `https://${deploymentId}.replit.app`;
-      
-      // Store deployment record
-      const deployment = await storage.createDeployment({
-        userId,
-        challengeId,
-        deploymentUrl,
-        status: "success",
-        config: { dockerfile, cicdConfig }
-      });
-      
-      // Update user XP
-      const challenge = await storage.getChallenge(challengeId);
-      if (challenge) {
-        const user = await storage.getUser(userId);
-        if (user) {
-          await storage.updateUser(userId, {
-            totalXp: user.totalXp + challenge.xpReward,
-            level: Math.floor((user.totalXp + challenge.xpReward) / 1000) + 1
-          });
-        }
-      }
-      
-      res.json({
-        deploymentUrl,
-        status: "success",
-        message: "Deployment completed successfully",
-        deploymentId: deployment[0].id
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Deployment failed" });
-    }
-  });
-
-  app.post("/api/deployment-challenges/:challengeId/health-check", async (req, res) => {
-    try {
-      // Simulate health check
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      res.json({
-        passedChecks: 4,
-        totalChecks: 4,
-        allPassed: true,
-        checks: [
-          { name: "Health endpoint", status: "passed" },
-          { name: "Metrics endpoint", status: "passed" },
-          { name: "Ready endpoint", status: "passed" },
-          { name: "API status", status: "passed" }
-        ]
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Health check failed" });
-    }
-  });
-
   // API proxy routes for testing
   app.get("/api/proxy/quotes", async (req, res) => {
     try {
@@ -246,46 +151,198 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Analytics endpoints
-  app.get("/api/analytics/user/:userId", async (req, res) => {
+  // Real-time collaboration endpoints
+  app.get("/api/collaboration/sessions", async (req, res) => {
     try {
-      const stats = await storage.getUserStats(req.params.userId);
-      res.json(stats);
+      // Mock active sessions for now
+      const sessions = [
+        {
+          id: "session-1",
+          challengeId: "challenge-1",
+          challengeTitle: "REST API Basics",
+          hostUserId: "user-2",
+          hostUsername: "api_master",
+          isActive: true,
+          maxParticipants: 3,
+          currentParticipants: 2,
+          createdAt: new Date().toISOString(),
+          sessionCode: "ABC123",
+          difficulty: "beginner",
+          category: "REST"
+        }
+      ];
+      res.json(sessions);
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Failed to fetch sessions" });
     }
   });
 
-  // Leaderboard endpoint
-  app.get("/api/leaderboard", async (req, res) => {
+  app.post("/api/collaboration/sessions", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 50;
-      const leaderboard = await storage.getLeaderboard(limit);
-      res.json(leaderboard);
+      const { challengeId, maxParticipants } = req.body;
+      const sessionCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      const session = {
+        id: `session-${Date.now()}`,
+        challengeId,
+        challengeTitle: "Mock Challenge",
+        hostUserId: "current-user",
+        hostUsername: "current_user",
+        isActive: true,
+        maxParticipants,
+        currentParticipants: 1,
+        createdAt: new Date().toISOString(),
+        sessionCode,
+        difficulty: "intermediate",
+        category: "REST"
+      };
+      
+      res.status(201).json(session);
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Failed to create session" });
     }
   });
 
-  // Professional portfolio endpoint
-  app.get("/api/portfolio/:userId", async (req, res) => {
+  app.post("/api/collaboration/sessions/join", async (req, res) => {
     try {
-      const user = await storage.getUser(req.params.userId);
-      const progress = await storage.getUserProgress(req.params.userId);
-      const stats = await storage.getUserStats(req.params.userId);
+      const { sessionCode } = req.body;
       
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      // Mock session join
+      const session = {
+        id: `session-${sessionCode}`,
+        challengeId: "challenge-1",
+        challengeTitle: "Joined Challenge",
+        hostUserId: "host-user",
+        hostUsername: "host_user",
+        isActive: true,
+        maxParticipants: 3,
+        currentParticipants: 2,
+        createdAt: new Date().toISOString(),
+        sessionCode,
+        difficulty: "intermediate",
+        category: "REST"
+      };
       
-      res.json({
-        user,
-        stats,
-        completedChallenges: progress.filter(p => p.isCompleted),
-        recentActivity: progress.slice(0, 10)
-      });
+      res.json(session);
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      res.status(500).json({ message: "Failed to join session" });
+    }
+  });
+
+  // AI Code Review endpoints
+  app.post("/api/ai/code-review", async (req, res) => {
+    try {
+      const { code, language, reviewType } = req.body;
+      
+      // Mock AI review response
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const review = {
+        id: `review-${Date.now()}`,
+        overallScore: Math.floor(Math.random() * 30) + 70,
+        issues: [
+          {
+            id: "issue-1",
+            type: "warning",
+            severity: "medium",
+            title: "Missing Error Handling",
+            description: "The code lacks proper error handling mechanisms.",
+            line: 5,
+            column: 3,
+            category: "Error Handling"
+          }
+        ],
+        strengths: ["Good variable naming", "Consistent formatting"],
+        recommendations: ["Add error handling", "Include unit tests"],
+        language,
+        reviewType,
+        timestamp: new Date().toISOString()
+      };
+      
+      res.json(review);
+    } catch (error) {
+      res.status(500).json({ message: "AI review failed" });
+    }
+  });
+
+  // Mentorship system endpoints
+  app.get("/api/mentorship/mentors", async (req, res) => {
+    try {
+      const mentors = [
+        {
+          id: "mentor-1",
+          username: "api_veteran",
+          bio: "Senior API architect with 8+ years experience",
+          skillAreas: ["REST APIs", "GraphQL", "API Design"],
+          experience: "8+ years",
+          rating: 4.9,
+          totalMentees: 45,
+          availableSlots: 3,
+          responseTime: "< 2 hours",
+          isAvailable: true,
+          sessionRate: 200
+        }
+      ];
+      res.json(mentors);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch mentors" });
+    }
+  });
+
+  app.get("/api/mentorship/requests/:userId", async (req, res) => {
+    try {
+      const requests = [
+        {
+          id: "req-1",
+          menteeId: req.params.userId,
+          skillArea: "REST APIs",
+          message: "Need help with API design patterns",
+          status: "pending",
+          createdAt: new Date().toISOString()
+        }
+      ];
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch requests" });
+    }
+  });
+
+  app.post("/api/mentorship/requests", async (req, res) => {
+    try {
+      const { mentorId, skillArea, message } = req.body;
+      
+      const request = {
+        id: `req-${Date.now()}`,
+        mentorId,
+        skillArea,
+        message,
+        status: "pending",
+        createdAt: new Date().toISOString()
+      };
+      
+      res.status(201).json(request);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to send request" });
+    }
+  });
+
+  app.get("/api/mentorship/sessions/:userId", async (req, res) => {
+    try {
+      const sessions = [
+        {
+          id: "session-1",
+          mentorId: "mentor-1",
+          menteeId: req.params.userId,
+          skillArea: "REST APIs",
+          scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          duration: 60,
+          status: "scheduled",
+          goals: ["Learn API design", "Understand REST principles"]
+        }
+      ];
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch sessions" });
     }
   });
 

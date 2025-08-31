@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { User, Globe, Github, Linkedin, Award, Download, Share, Eye, EyeOff, Star } from "lucide-react";
+import { User, Globe, Linkedin, Award, Download, Share, Eye, EyeOff, Star, Calendar, Clock, Trophy, X, Github } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,20 @@ interface Certificate {
   issuedAt: string;
   verificationCode: string;
   challengesCompleted: string[];
+}
+
+interface CompletedChallenge {
+  id: string;
+  title: string;
+  description?: string;
+  difficulty: string;
+  category?: string;
+  completedAt: string;
+  xpEarned: number;
+  solution?: string;
+  githubUrl?: string;
+  timeSpent?: string;
+  rating?: string;
 }
 
 export default function ProfessionalPortfolio({ userId }: { userId: string }) {
@@ -69,7 +83,7 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
   });
 
   // Get completed challenges
-  const { data: completedChallenges } = useQuery({
+  const { data: completedChallenges } = useQuery<CompletedChallenge[]>({
     queryKey: ["/api/users", userId, "completed-challenges"],
   });
 
@@ -83,7 +97,7 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
       challengesCompleted: ["challenge-1", "challenge-2"]
     },
     {
-      id: "cert-2", 
+      id: "cert-2",
       skillTrack: "API Authentication Mastery",
       issuedAt: "2025-08-14T00:00:00Z",
       verificationCode: "API-AUTH-2025-XYZ789",
@@ -91,30 +105,45 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
     }
   ];
 
-  const mockCompletedChallenges = [
+  const mockCompletedChallenges: CompletedChallenge[] = [
     {
       id: "challenge-1",
       title: "Your First API Call",
+      description: "Make your first request to a public API.",
       difficulty: "beginner",
+      category: "HTTP Requests",
       completedAt: "2025-08-05T00:00:00Z",
       xpEarned: 100,
-      solution: "fetch('https://api.quotable.io/random').then(r => r.json()).then(d => console.log(d))"
+      solution: "fetch('https://api.quotable.io/random').then(r => r.json()).then(d => console.log(d))",
+      githubUrl: "https://github.com/example/challenge-1",
+      timeSpent: "1.5h",
+      rating: "4.5"
     },
     {
       id: "challenge-2",
-      title: "Weather API Integration", 
+      title: "Weather API Integration",
+      description: "Integrate a weather API to display current conditions.",
       difficulty: "intermediate",
+      category: "Data Fetching",
       completedAt: "2025-08-10T00:00:00Z",
       xpEarned: 250,
-      solution: "Advanced weather API integration with error handling"
+      solution: "Implemented a robust solution with error handling and data parsing.",
+      githubUrl: "https://github.com/example/challenge-2",
+      timeSpent: "3h",
+      rating: "4.7"
     },
     {
       id: "challenge-3",
       title: "OAuth 2.0 Flow Mastery",
-      difficulty: "advanced", 
+      description: "Implement a secure OAuth 2.0 authorization flow.",
+      difficulty: "advanced",
+      category: "Authentication",
       completedAt: "2025-08-14T00:00:00Z",
       xpEarned: 500,
-      solution: "Complete OAuth implementation with token management"
+      solution: "Full OAuth implementation with token refresh and secure storage.",
+      githubUrl: "https://github.com/example/challenge-3",
+      timeSpent: "5h",
+      rating: "4.9"
     }
   ];
 
@@ -146,7 +175,7 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast({
         title: "Portfolio Exported",
         description: "Your portfolio PDF has been downloaded.",
@@ -219,7 +248,7 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
                 </span>
                 <Switch
                   checked={portfolioData.isPublic}
-                  onCheckedChange={(checked) => 
+                  onCheckedChange={(checked) =>
                     setPortfolioData(prev => ({ ...prev, isPublic: checked }))
                   }
                   data-testid="portfolio-visibility-toggle"
@@ -425,7 +454,7 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
                         </div>
                         <Badge className="bg-blue-100 text-blue-800">Verified</Badge>
                       </div>
-                      
+
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Issued:</span>
@@ -480,12 +509,12 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
                     </Select>
                   </div>
                 )}
-                
+
                 <div className="flex flex-wrap gap-2">
                   {(portfolioData.skillHighlights || []).map((skill, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="secondary" 
+                    <Badge
+                      key={index}
+                      variant="secondary"
                       className="flex items-center space-x-1"
                     >
                       <Star className="h-3 w-3" />
@@ -502,7 +531,7 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
                     </Badge>
                   ))}
                 </div>
-                
+
                 {(portfolioData.skillHighlights || []).length === 0 && (
                   <p className="text-gray-500 text-sm">No skills highlighted yet.</p>
                 )}
@@ -536,51 +565,84 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
                     </Select>
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-1 gap-4">
                   {(portfolioData.featuredChallenges || []).map((challengeId) => {
                     const challenge = mockCompletedChallenges.find(c => c.id === challengeId);
                     if (!challenge) return null;
-                    
+
                     return (
-                      <div key={challengeId} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h4 className="font-medium text-gray-900">{challenge.title}</h4>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Badge className={getDifficultyColor(challenge.difficulty)}>
-                                {challenge.difficulty}
-                              </Badge>
-                              <span className="text-sm text-gray-600">
-                                +{challenge.xpEarned} XP
-                              </span>
-                              <span className="text-sm text-gray-600">
-                                Completed {new Date(challenge.completedAt).toLocaleDateString()}
-                              </span>
+                      <Card key={challenge.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-1">{challenge.title}</h4>
+                              <p className="text-sm text-gray-600 mb-2">{challenge.description}</p>
+                              <div className="flex items-center space-x-2">
+                                <Badge className={
+                                  challenge.difficulty === "beginner" ? "bg-green-100 text-green-800" :
+                                  challenge.difficulty === "intermediate" ? "bg-amber-100 text-amber-800" :
+                                  "bg-red-100 text-red-800"
+                                }>
+                                  {challenge.difficulty}
+                                </Badge>
+                                <Badge variant="outline">{challenge.category}</Badge>
+                                <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{new Date(challenge.completedAt).toLocaleDateString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                            {isEditing && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFeaturedChallenge(challengeId)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                          {challenge.solution && (
+                            <div className="mt-3">
+                              <h5 className="text-sm font-medium text-gray-700 mb-2">Solution Approach:</h5>
+                              <p className="text-sm text-gray-600">{challenge.solution}</p>
+                            </div>
+                          )}
+                          {challenge.githubUrl && (
+                            <div className="mt-3">
+                              <Button variant="outline" size="sm" asChild>
+                                <a href={challenge.githubUrl} target="_blank" rel="noopener noreferrer">
+                                  <Github className="h-4 w-4 mr-2" />
+                                  View on GitHub
+                                </a>
+                              </Button>
+                            </div>
+                          )}
+                          <div className="mt-3 pt-3 border-t">
+                            <div className="flex items-center justify-between text-sm text-gray-600">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="h-4 w-4" />
+                                  <span>{challenge.timeSpent || "2.5h"}</span>
+                                </div>
+                                <div className="flex items-center space-x-1">
+                                  <Star className="h-4 w-4" />
+                                  <span>{challenge.rating || "4.8"}/5</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Trophy className="h-4 w-4 text-yellow-500" />
+                                <span>{challenge.xpEarned || 250} XP</span>
+                              </div>
                             </div>
                           </div>
-                          {isEditing && (
-                            <button
-                              onClick={() => removeFeaturedChallenge(challengeId)}
-                              className="text-gray-500 hover:text-red-500"
-                              data-testid={`remove-challenge-${challengeId}`}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                        
-                        <div className="bg-gray-50 rounded p-3">
-                          <h5 className="text-sm font-medium text-gray-700 mb-2">Solution:</h5>
-                          <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono">
-                            {challenge.solution}
-                          </pre>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                 </div>
-                
+
                 {(portfolioData.featuredChallenges || []).length === 0 && (
                   <p className="text-gray-500 text-sm">No featured challenges yet.</p>
                 )}
@@ -610,7 +672,7 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
                     {generatePDFMutation.isPending ? "Generating..." : "Download PDF Resume"}
                   </Button>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">LinkedIn Integration</h4>
                   <p className="text-gray-600 text-sm mb-4">
@@ -621,7 +683,7 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
                     Share on LinkedIn
                   </Button>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">Developer Profile</h4>
                   <p className="text-gray-600 text-sm mb-4">
@@ -630,10 +692,10 @@ export default function ProfessionalPortfolio({ userId }: { userId: string }) {
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h5 className="text-sm font-medium text-gray-700 mb-2">Embed Code:</h5>
                     <pre className="text-xs bg-white border rounded p-2 overflow-x-auto">
-{`<iframe 
-  src="${publicPortfolioUrl}/embed" 
-  width="400" 
-  height="300" 
+{`<iframe
+  src="${publicPortfolioUrl}/embed"
+  width="400"
+  height="300"
   frameborder="0">
 </iframe>`}
                     </pre>
